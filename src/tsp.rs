@@ -1,35 +1,34 @@
 use std::collections::{BTreeMap, BTreeSet};
-use itertools::Itertools;
-
-use crate::unidirgraph::UnidirectionalGraph;
+use itertools::Itertools; use crate::unidirgraph::UnidirectionalGraph;
+use crate::minmax::{MinMax,MinMax::NA,MinMax::Value};
 
 use log::{  info ,/* error ,*/ debug, /* warn ,*/ trace };
 
 #[derive(Debug,Clone)]
-pub struct PathInfo {
-    distance: i64,
+pub struct PathInfo<T> {
+    distance: T,
     prev: usize,
 }
 
-pub struct TSP {
+pub struct TSP<T> {
     pub vertex: BTreeSet<usize>,
     pub  vertex_sets :  Vec<BTreeSet<usize>>,
-    path_calcs : BTreeMap<(BTreeSet<usize>,usize),PathInfo>,
-    pub graph: UnidirectionalGraph<i64>,
+    path_calcs : BTreeMap<(BTreeSet<usize>,usize),PathInfo<T>>,
+    pub graph: UnidirectionalGraph<T>,
     tsp_path:  Vec<usize>,
-    tsp_distance: i64,
+    tsp_distance: MinMax<T>,
 }
 
-impl TSP {
+impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Display+std::ops::Add<Output = T>> TSP<T> {
 
-    pub fn new() -> TSP {
+    pub fn new() -> TSP<T> {
         TSP {
             vertex:    BTreeSet::<usize>::new(),
             vertex_sets: Vec::<BTreeSet<usize>>::new(),
-            path_calcs : BTreeMap::<(BTreeSet::<usize>,usize),PathInfo>::new(),
-            graph: UnidirectionalGraph::<i64>::new(),
+            path_calcs : BTreeMap::<(BTreeSet::<usize>,usize),PathInfo<T>>::new(),
+            graph: UnidirectionalGraph::<T>::new(),
             tsp_path:  Vec::<usize>::new(),
-            tsp_distance: i64::MAX,
+            tsp_distance: MinMax::NA,
         }
 
     }
@@ -96,7 +95,7 @@ impl TSP {
                 trace!(" {:?} -> v:{} Min of:", reduced_set, v);
                 if reduced_set.is_empty() {
         //            println!("Edges i{:#?}",self.graph);
-                    let edge = UnidirectionalGraph::<i64>::edge_name(1,*v);
+                    let edge = UnidirectionalGraph::<T>::edge_name(1,*v);
                     let edge_distance = self.graph.get_distance(1,*v);
                     trace!(" Edge (1,{}) i.e {:?} {}", v,edge, edge_distance);
                     self.path_calcs.insert(
@@ -109,15 +108,15 @@ impl TSP {
                 }
                 else {
                     for source in &reduced_set {
-                        let mut min_distance = i64::MAX;
-                        let edge = UnidirectionalGraph::<i64>::edge_name(*source,*v);
+                        let mut min_distance = MinMax::NA;
+                        let edge = UnidirectionalGraph::<T>::edge_name(*source,*v);
                         let edge_distance = self.graph.get_distance(*source,*v);
                         let set_weight = self.path_calcs.get(&(reduced_set.clone(),*source)).unwrap().distance;
                         let new_dist = set_weight + edge_distance;
                         let trace_str = format!( "      Set {:?} to {} via {} : sd {}+ ({},{}) d {} = {} cur {})",
                                     reduced_set, v, source, set_weight, source, v, edge_distance, new_dist, min_distance);
-                        if new_dist < min_distance {
-                            min_distance = new_dist;
+                        if Value(new_dist) < min_distance {
+                            min_distance = Value(new_dist);
                             self.path_calcs.insert(
                                 (set.clone(),*v),
                                 PathInfo {
@@ -136,14 +135,14 @@ impl TSP {
                 reduced_set.insert(*v);
             }
         }
-        let mut min_distance = i64::MAX;
+        let mut min_distance = MinMax::NA;
         let mut final_vertex : usize = 0;
         for last_vertex in &self.vertex {
             let set_weight = self.path_calcs.get(&(self.vertex.clone(),*last_vertex)).unwrap().distance;
             let edge_distance = self.graph.get_distance(1,*last_vertex);
             let new_weight = set_weight + edge_distance;
-            if new_weight < min_distance {
-                min_distance = new_weight;
+            if Value(new_weight) < min_distance {
+                min_distance = Value(new_weight);
                 final_vertex = *last_vertex;
             }
         }
@@ -156,12 +155,12 @@ impl TSP {
         self.graph.define_vertex(vertex);
     }
 
-    pub fn define_edge(&mut self, v1: usize, v2: usize, distance: i64) {
+    pub fn define_edge(&mut self, v1: usize, v2: usize, distance: T) {
         self.graph.define_edge(v1,v2,distance);
     }
 
 
-    pub fn solution(&self) -> (i64, &Vec<usize>) {
+    pub fn solution(&self) -> (MinMax<T>, &Vec<usize>) {
         (self.tsp_distance,&self.tsp_path)
     }
 
@@ -197,7 +196,7 @@ mod tests {
         tsp.define_edge(3,5,i);   // i+=1;
         tsp.calculate(1);
         let (distance, path) = tsp.solution();
-        assert_eq!(distance,15);
+        assert_eq!(distance,Value(15));
         assert_eq!(path,&vec![5,4,3,2,1]);
 
     }
@@ -217,9 +216,28 @@ mod tests {
         tsp.define_edge(2,4,i);   //i+=1;
         tsp.calculate(1);
         let (distance, path) = tsp.solution();
-        assert_eq!(distance,10);
+        assert_eq!(distance,Value(10));
         assert_eq!(path,&vec![4,3,2,1]);
 
     }
 
+    #[test]
+    fn test_float_4() {
+        init_log();
+
+        let mut tsp = TSP::<f64>::new();
+
+        let mut i = 1.0;
+        tsp.define_edge(1,2,i);   i+=1.0;
+        tsp.define_edge(3,2,i);   i+=1.0;
+        tsp.define_edge(3,4,i);   i+=1.0;
+        tsp.define_edge(1,4,i);   i+=1.0;
+        tsp.define_edge(1,3,i);   i+=1.0;
+        tsp.define_edge(2,4,i);   //i+=1;
+        tsp.calculate(1);
+        let (distance, path) = tsp.solution();
+        assert_eq!(distance,Value(10.0));
+        assert_eq!(path,&vec![4,3,2,1]);
+
+    }
 }

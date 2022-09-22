@@ -1,5 +1,6 @@
 mod tsp;
 mod unidirgraph;
+mod minmax;
 use crate::tsp::TSP;
 use log::{  info ,/* error ,*/ debug, /* warn ,*/ trace };
 /*
@@ -179,16 +180,16 @@ fn main() {
     g.define_edge(2,5,i);   i+=1;
     g.define_edge(3,5,i);   
 */
-    let mut i = 1;
-    tsp.define_edge(1,2,i);   i+=1;
-    tsp.define_edge(3,2,i);   i+=1;
-    tsp.define_edge(3,4,i);   i+=1;
-    tsp.define_edge(4,5,i);   i+=1;   
-    tsp.define_edge(1,5,i);   i+=1;
-    tsp.define_edge(1,4,i);   i+=1;
-    tsp.define_edge(1,3,i);   i+=1;
-    tsp.define_edge(2,4,i);   i+=1;
-    tsp.define_edge(2,5,i);   i+=1;
+    let mut i = 1.5;
+    tsp.define_edge(1,2,i);   i+=1.1;
+    tsp.define_edge(3,2,i);   i+=1.1;
+    tsp.define_edge(3,4,i);   i+=1.1;
+    tsp.define_edge(4,5,i);   i+=1.1;   
+    tsp.define_edge(1,5,i);   i+=1.1;
+    tsp.define_edge(1,4,i);   i+=1.1;
+    tsp.define_edge(1,3,i);   i+=1.1;
+    tsp.define_edge(2,4,i);   i+=1.1;
+    tsp.define_edge(2,5,i);   i+=1.1;
     tsp.define_edge(3,5,i);   // i+=1;
 
     info!("Edges");
