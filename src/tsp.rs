@@ -40,8 +40,8 @@ impl TSP {
     }
 
 
-    pub fn initialize(&mut self, starting_vertex: usize) {
-        trace!("Starting Initialize");
+    fn initialize(&mut self, starting_vertex: usize) {
+        debug!("Starting Initialize");
         // creat a set with all the vertexes in it
         let mut vertex : BTreeSet<usize> = BTreeSet::<usize>::from_iter(self.graph.vertex_iter().cloned());
         
@@ -79,16 +79,17 @@ impl TSP {
             path.push(previous);
             cur_vertex = previous;
         }
-        trace!("TSP Path is {:?}",path);
+        info!("TSP Path is {:?}",path);
         path
 
     }
 
 
-    pub fn calculate_tsp_path(&mut self) {
+    pub fn calculate(&mut self, starting_vertex: usize) {
 
+        self.initialize(starting_vertex);
         for set in &self.vertex_sets {
-            info!("Set {:?} ", set);
+            debug!("Set {:?} ", set);
             let mut reduced_set = set.clone();
             for v in set {
                 reduced_set.remove(v);
@@ -146,7 +147,7 @@ impl TSP {
                 final_vertex = *last_vertex;
             }
         }
-        println!("TSP Distance {} last vertex is {}", min_distance,final_vertex);
+        info!("TSP Distance {} last vertex is {}", min_distance,final_vertex);
         self.tsp_path = self.find_path(&self.vertex,final_vertex);
         self.tsp_distance = min_distance;
     }
@@ -166,3 +167,59 @@ impl TSP {
 
 }
 
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn init_log() {
+       let _ = env_logger::builder().is_test(true).try_init();
+       info!("Init {}",module_path!());
+
+    }
+
+    #[test]
+    fn test_simple_5() {
+        init_log();
+
+        let mut tsp = TSP::new();
+
+        let mut i = 1;
+        tsp.define_edge(1,2,i);   i+=1;
+        tsp.define_edge(3,2,i);   i+=1;
+        tsp.define_edge(3,4,i);   i+=1;
+        tsp.define_edge(4,5,i);   i+=1;   
+        tsp.define_edge(1,5,i);   i+=1;
+        tsp.define_edge(1,4,i);   i+=1;
+        tsp.define_edge(1,3,i);   i+=1;
+        tsp.define_edge(2,4,i);   i+=1;
+        tsp.define_edge(2,5,i);   i+=1;
+        tsp.define_edge(3,5,i);   // i+=1;
+        tsp.calculate(1);
+        let (distance, path) = tsp.solution();
+        assert_eq!(distance,15);
+        assert_eq!(path,&vec![5,4,3,2,1]);
+
+    }
+
+    #[test]
+    fn test_simple_4() {
+        init_log();
+
+        let mut tsp = TSP::new();
+
+        let mut i = 1;
+        tsp.define_edge(1,2,i);   i+=1;
+        tsp.define_edge(3,2,i);   i+=1;
+        tsp.define_edge(3,4,i);   i+=1;
+        tsp.define_edge(1,4,i);   i+=1;
+        tsp.define_edge(1,3,i);   i+=1;
+        tsp.define_edge(2,4,i);   //i+=1;
+        tsp.calculate(1);
+        let (distance, path) = tsp.solution();
+        assert_eq!(distance,10);
+        assert_eq!(path,&vec![4,3,2,1]);
+
+    }
+
+}

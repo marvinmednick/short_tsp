@@ -224,11 +224,8 @@ fn main() {
     println!("Vertex Set {:?}", vertex_set);
     println!("G Vertex sets {:?}", tsp.vertex_sets);
 */
-    trace!("Calling Init");
-    tsp.initialize(1);
-
     trace!("Calling Calcuate");
-    tsp.calculate_tsp_path();
+    tsp.calculate(1);
     let (distance, path) = tsp.solution();
     println!("TSP Distance {}   Path is {:?}", distance, path);
 

@@ -19,7 +19,7 @@ impl UnidirectionalGraph {
 
     pub fn define_vertex(&mut self,vertex: usize) {
         self.vertex.insert(vertex);
-        debug!("Adding Vertex {}", vertex)
+        trace!("Adding Vertex {}", vertex)
 
     }
 
