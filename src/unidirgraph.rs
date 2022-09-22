@@ -2,17 +2,17 @@ use std::collections::{BTreeMap, BTreeSet};
 use log::{ /* info ,*/ error, debug, warn, trace };
 
 #[derive(Debug,Clone)]
-pub struct UnidirectionalGraph {
+pub struct UnidirectionalGraph<T> {
     pub vertex : BTreeSet<usize>,
-    pub edges :  BTreeMap::<(usize,usize),i64>,
+    pub edges :  BTreeMap::<(usize,usize),T>,
 
 }
 
-impl UnidirectionalGraph {
+impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy> UnidirectionalGraph<T> {
 
-    pub fn new() -> UnidirectionalGraph {
+    pub fn new() -> UnidirectionalGraph<T> {
         UnidirectionalGraph {  
-            edges :  BTreeMap::<(usize,usize),i64>::new(),
+            edges :  BTreeMap::<(usize,usize),T>::new(),
             vertex : BTreeSet::<usize>::new(),
         }
     }
@@ -23,7 +23,7 @@ impl UnidirectionalGraph {
 
     }
 
-    pub fn define_edge(&mut self, v1: usize, v2: usize, distance: i64) {
+    pub fn define_edge(&mut self, v1: usize, v2: usize, distance: T) {
 
         self.define_vertex(v1);
         self.define_vertex(v2);
@@ -44,7 +44,7 @@ impl UnidirectionalGraph {
         }
     }
 
-    pub fn get_distance(&self, v1: usize, v2: usize) -> i64 {
+    pub fn get_distance(&self, v1: usize, v2: usize) -> T {
         *self.edges.get(&Self::edge_name(v1,v2)).unwrap()
     }
 

@@ -15,7 +15,7 @@ pub struct TSP {
     pub vertex: BTreeSet<usize>,
     pub  vertex_sets :  Vec<BTreeSet<usize>>,
     path_calcs : BTreeMap<(BTreeSet<usize>,usize),PathInfo>,
-    pub graph: UnidirectionalGraph,
+    pub graph: UnidirectionalGraph<i64>,
     tsp_path:  Vec<usize>,
     tsp_distance: i64,
 }
@@ -27,7 +27,7 @@ impl TSP {
             vertex:    BTreeSet::<usize>::new(),
             vertex_sets: Vec::<BTreeSet<usize>>::new(),
             path_calcs : BTreeMap::<(BTreeSet::<usize>,usize),PathInfo>::new(),
-            graph: UnidirectionalGraph::new(),
+            graph: UnidirectionalGraph::<i64>::new(),
             tsp_path:  Vec::<usize>::new(),
             tsp_distance: i64::MAX,
         }
@@ -96,7 +96,7 @@ impl TSP {
                 trace!(" {:?} -> v:{} Min of:", reduced_set, v);
                 if reduced_set.is_empty() {
         //            println!("Edges i{:#?}",self.graph);
-                    let edge = UnidirectionalGraph::edge_name(1,*v);
+                    let edge = UnidirectionalGraph::<i64>::edge_name(1,*v);
                     let edge_distance = self.graph.get_distance(1,*v);
                     trace!(" Edge (1,{}) i.e {:?} {}", v,edge, edge_distance);
                     self.path_calcs.insert(
@@ -110,7 +110,7 @@ impl TSP {
                 else {
                     for source in &reduced_set {
                         let mut min_distance = i64::MAX;
-                        let edge = UnidirectionalGraph::edge_name(*source,*v);
+                        let edge = UnidirectionalGraph::<i64>::edge_name(*source,*v);
                         let edge_distance = self.graph.get_distance(*source,*v);
                         let set_weight = self.path_calcs.get(&(reduced_set.clone(),*source)).unwrap().distance;
                         let new_dist = set_weight + edge_distance;
