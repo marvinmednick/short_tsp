@@ -1,44 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-
-#[derive(Debug,Clone)]
-struct TspGraph {
-    pub edges :  BTreeMap::<(usize,usize),i64>,
-//    sets:   BTreeMap<BTreeSet((usize,usize))>
-
-}
-
-impl TspGraph {
-
-    pub fn new() -> TspGraph {
-        TspGraph {  edges :  BTreeMap::<(usize,usize),i64>::new() }
-    }
-
-    pub fn define_edge(&mut self, v1: usize, v2: usize, distance: i64) {
-
-        self.edges.insert(Self::edge_name(v1,v2), distance);
-    }
-
-    // creates a properly order edge name  tuple
-    // edge names between two vertex are defined to be (lower id, higher id)  in order to
-    // ensure that are consistent independent of how v1 and v2 are set  
-    // i.e  both v1=3, v2=2 and v1=2 and v2=3 both with result in (2,3) (the edge between 2 and 3)
-    pub fn edge_name(v1: usize, v2: usize) -> (usize, usize) {
-
-        if v1 <= v2 {
-            (v1, v2)
-        }
-        else {
-            (v2, v1)
-        }
-    }
-
-    pub fn get_distance(&self, v1: usize, v2: usize) -> i64 {
-        *self.edges.get(&Self::edge_name(v1,v2)).unwrap()
-    }
-}
-
-
+mod unidirgraph;
+use crate::unidirgraph::UnidirectionalGraph;
 
 
 fn main() {
@@ -72,7 +35,7 @@ fn main() {
     }
 
 
-    let mut g = TspGraph::new();
+    let mut g = UnidirectionalGraph::new();
     let mut i = 1;
     g.define_edge(1,2,i);   i+=1;
     g.define_edge(3,2,i);   i+=1;
@@ -120,7 +83,7 @@ fn main() {
             reduced_set.remove(v);
             println!(" {:?} -> v:{} Min of:", reduced_set, v);
             if reduced_set.is_empty() {
-                let edge = TspGraph::edge_name(1,*v);
+                let edge = UnidirectionalGraph::edge_name(1,*v);
                 let edge_distance = g.get_distance(1,*v);
                 println!(" Edge (1,{}) i.e {:?} {}", v,edge, edge_distance);
                 tsp_calc.insert(set.clone(),edge_distance);
@@ -128,7 +91,7 @@ fn main() {
             else {
                 let mut min_distance = i64::MAX;
                 for source in &reduced_set {
-                    let edge = TspGraph::edge_name(*source,*v);
+                    let edge = UnidirectionalGraph::edge_name(*source,*v);
                     let edge_distance = g.get_distance(*source,*v);
                     let set_weight = tsp_calc.get(&reduced_set).unwrap();
                     let new_dist = set_weight + edge_distance;
