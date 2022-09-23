@@ -18,14 +18,14 @@ pub struct UnidirectionalGraph<T> {
 }
 
 
-impl<T: PartialOrd+ std::fmt::Debug+Copy> GraphBuilder for &mut UnidirectionalGraph<T>{
+impl<T: PartialOrd+ std::fmt::Debug+Copy+std::fmt::Display> GraphBuilder for &mut UnidirectionalGraph<T>{
     fn add_vertex(&mut self, id:  usize, xpos: f64, ypos: f64) {
         self.define_vertex(id, xpos, ypos);
     }
 }
 
 
-impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy> UnidirectionalGraph<T> {
+impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::fmt::Display> UnidirectionalGraph<T> {
 
     pub fn new() -> UnidirectionalGraph<T> {
         UnidirectionalGraph {  
@@ -38,7 +38,7 @@ impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy> UnidirectionalGraph<T> {
     pub fn define_vertex(&mut self,vertex_id: usize, xpos: f64, ypos: f64 ) {
         self.vertex_info.insert(vertex_id, Vertex {  vertex_id, xpos, ypos });
         self.vertex.insert(vertex_id);
-        trace!("Adding Vertex {} ({},{})", vertex_id, xpos, ypos);
+        debug!("Adding Vertex {} ({},{})", vertex_id, xpos, ypos);
 
     }
 
@@ -46,6 +46,7 @@ impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy> UnidirectionalGraph<T> {
 
         if self.vertex.contains(&v1) && self.vertex.contains(&v2) {
             self.edges.insert(Self::edge_name(v1,v2), distance);
+            debug!("Adding Edge ({},{}) distance={}",v1,v2,distance);
         }
         else {
             error!("Bad Vertex info -- either vertex {} or {} is not yet defind",v1,v2);

@@ -2,6 +2,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use itertools::Itertools; use crate::unidirgraph::UnidirectionalGraph;
 use crate::minmax::{MinMax,MinMax::NA,MinMax::Value};
 use crate::unidirgraph::Vertex;
+use crate::graphbuilder::GraphBuilder;
 
 use log::{  info ,/* error ,*/ debug, /* warn ,*/ trace };
 
@@ -20,6 +21,38 @@ pub struct TSP<T> {
     tsp_distance: MinMax<T>,
 }
 
+
+impl<T: PartialOrd+ std::fmt::Debug+Copy+std::fmt::Display> GraphBuilder for &mut TSP<T>{
+    fn add_vertex(&mut self, id:  usize, xpos: f64, ypos: f64) {
+        self.graph.define_vertex(id, xpos, ypos);
+    }
+}
+
+
+
+impl TSP<f64> {
+    pub fn generate_edges_by_dist(&mut self) {
+
+        let vertex : BTreeSet<usize> = BTreeSet::<usize>::from_iter(self.graph.vertex_iter().cloned());
+        let vset = vertex.iter().combinations(2) ;
+        for combo in vset {
+            let vertex1 = self.graph.get_info(*combo[0]).unwrap();
+            let vertex2 = self.graph.get_info(*combo[1]).unwrap();
+
+            let dist = ( 
+                        (vertex1.xpos - vertex2.xpos).powf(2.0) + 
+                        (vertex1.ypos - vertex2.ypos).powf(2.0)
+                    ).sqrt();
+            trace!("Distance for v1 {} to v2 {} is {}",combo[0],combo[1],dist);
+            self.define_edge(*combo[0],*combo[1],dist);
+            
+
+        }
+
+    }
+
+
+}
 impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Display+std::ops::Add<Output = T>> TSP<T> {
 
     pub fn new() -> TSP<T> {
@@ -39,24 +72,6 @@ impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Displ
         self.vertex_sets.push(vertex_set);
     }
 
-
-    pub fn generate_edges_by_dist(&mut self) {
-        let mut vertex : BTreeSet<usize> = BTreeSet::<usize>::from_iter(self.graph.vertex_iter().cloned());
-        let vset = vertex.iter().combinations(2) ;
-        for combo in vset {
-            let vertex1 = self.graph.get_info(*combo[0]).unwrap();
-            let vertex2 = self.graph.get_info(*combo[1]).unwrap();
-
-            let dist = ( 
-                        (vertex1.xpos - vertex2.xpos).powf(2.0) + 
-                        (vertex1.ypos - vertex2.ypos).powf(2.0)
-                    ).sqrt();
-            trace!("Distance for v1 {} to v2 {} is {}",combo[0],combo[1],dist);
-            
-
-        }
-
-    }
 
     fn initialize(&mut self, starting_vertex: usize) {
         debug!("Starting Initialize");
@@ -107,7 +122,7 @@ impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Displ
 
         self.initialize(starting_vertex);
         for set in &self.vertex_sets {
-            debug!("Set {:?} ", set);
+            trace!("Set {:?} ", set);
             let mut reduced_set = set.clone();
             for v in set {
                 reduced_set.remove(v);
@@ -126,14 +141,16 @@ impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Displ
                     );
                 }
                 else {
+                    let mut min_distance = MinMax::NA;
                     for source in &reduced_set {
-                        let mut min_distance = MinMax::NA;
                         let edge = UnidirectionalGraph::<T>::edge_name(*source,*v);
                         let edge_distance = self.graph.get_distance(*source,*v);
                         let set_weight = self.path_calcs.get(&(reduced_set.clone(),*source)).unwrap().distance;
                         let new_dist = set_weight + edge_distance;
-                        let trace_str = format!( "      Set {:?} to {} via {} : sd {}+ ({},{}) d {} = {} cur {})",
+                        let trace_str = format!("Set {:?} to {} via {} : sd {}+ ({},{}) d {} = {} cur {})",
                                     reduced_set, v, source, set_weight, source, v, edge_distance, new_dist, min_distance);
+                        trace!("{:?},{}:  {:?},{} = {} + {} ({})",set,v,reduced_set,source,set_weight,edge_distance,new_dist);
+                        let old_min_dist = min_distance;
                         if Value(new_dist) < min_distance {
                             min_distance = Value(new_dist);
                             self.path_calcs.insert(
@@ -143,10 +160,11 @@ impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Displ
                                     prev: *source,
                                     }
                             );
-                            trace!("{} - Updating {:?},{} to {}",trace_str, set,v, new_dist);
+//                            trace!("{} - Updating {:?},{} to {}",trace_str, set,v, new_dist);
+                            debug!("{:?},{} now {} (was {})",set,v,new_dist,old_min_dist);
                         }
                         else {
-                            trace!("{} - Skipping",trace_str, );
+                            debug!("{} - Skipping",trace_str, );
                         }
 
                     }
@@ -253,7 +271,6 @@ mod tests {
     #[test]
     fn test_float_4() {
         init_log();
-
         let mut tsp = TSP::<f64>::new();
 
         // set position to all 0.0
@@ -273,4 +290,43 @@ mod tests {
         assert_eq!(path,&vec![4,3,2,1]);
 
     }
+
+    #[test]
+    fn test_float_10_4() {
+        init_log();
+        let mut tsp = TSP::<f64>::new();
+        tsp.define_vertex(1, 3.433752748235324,2.9215164273513206);
+        tsp.define_vertex(2, 0.266027289402357, 3.367553812393056);
+        tsp.define_vertex(3, 3.107592426409198, 3.091359997997841);
+        tsp.define_vertex(4, 1.2770174634306963, 1.4543288785259425);
+        tsp.generate_edges_by_dist();
+        tsp.calculate(1);
+        let (distance, path) = tsp.solution();
+        debug!("Distance {} , path {:?}",distance, path);
+        let mut int_distance : MinMax<i64> = MinMax::NA;
+        if let Value(dist) = distance {
+            int_distance  = Value (dist as i64)
+        }
+        assert_eq!(int_distance,Value(7));
+
+    }
+
+    #[test]
+    fn test_float_1_2() {
+        init_log();
+        let mut tsp = TSP::<f64>::new();
+        tsp.define_vertex(1,1.185111439847509,1.1487624635211768);
+        tsp.define_vertex(2,1.4444704252469853,1.9471010355780376);
+        tsp.generate_edges_by_dist();
+        tsp.calculate(1);
+        let (distance, path) = tsp.solution();
+        debug!("Distance {} , path {:?}",distance, path);
+        let mut int_distance : MinMax<i64> = MinMax::NA;
+        if let Value(dist) = distance {
+            int_distance  = Value (dist as i64)
+        }
+        assert_eq!(int_distance,Value(1));
+
+    }
+
 }

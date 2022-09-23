@@ -25,16 +25,16 @@ where F: GraphBuilder,
     }
     let re_first_line = Regex::new(r"^\s*(?P<num_vertex>\d+)([^\d]*$|$)").unwrap();
     if let Some(caps) = re_first_line.captures(&line_data) {
-
-        let num_vertex = caps.name("num_vertex").unwrap();
-        println!("line {} expecting {} vertex",_line_count, num_vertex);
+        let num_vertex_text = caps.name("num_vertex").map_or("", |m| m.as_str());
+        let num_vertex = num_vertex_text.parse::<usize>().unwrap();
+        trace!("line {} expecting {} vertex",_line_count, num_vertex);
     }
     else {
-        error!("Not able to read line {} correctly {}",_line_count,line_data )
+        error!("Not able to read line {} correctly {}",_line_count,line_data);
     }
     _line_count += 1;	
 
-    let vertex_count = 0
+    let mut vertex_count = 0;
     for line in reader.lines() {
 		_line_count += 1;	
 		vertex_count += 1;	
@@ -44,22 +44,22 @@ where F: GraphBuilder,
             info!("Proccesing Line {} - ({})",_line_count,line_data);
         }
 
-        let re_float_vertex = Regex::new(r"^\s*(?P<xpos>(-*)(\d+|\d+\.\d+))\s+(?P<ypos>(-*)(\d+|\d+\.\d+)).*$").unwrap();
+        let re_float_vertex = Regex::new(r"^\s*(?P<xpos>(-*)(\d+\.\d+|\d+))\s+(?P<ypos>(-*)(\d+\.\d+)|\d+).*$").unwrap();
         if let Some(caps) = re_float_vertex.captures(&line_data) {
-            trace!("line {} matched float {:?}",_line_count, caps);
-        }
+
             let text_xpos = caps.name("xpos").map_or("", |m| m.as_str());
             trace!("Text_xpos  = {} caps {:?}",text_xpos,caps);
-            let xpos = text1.parse::<f64>().unwrap();
-            let text_ypos = caps.name("xpos").map_or("", |m| m.as_str());
+            let xpos = text_xpos.parse::<f64>().unwrap();
+
+            let text_ypos = caps.name("ypos").map_or("", |m| m.as_str());
             trace!("Text_ypos  = {} caps {:?}",text_ypos,caps);
-            let xpos = text1.parse::<f64>().unwrap();
-            debug!("Reading connectsion for vertex {}",vertex);
+            let ypos = text_ypos.parse::<f64>().unwrap();
+
             graph_functions.add_vertex(vertex_count,xpos, ypos);
 
         }
         else {
-            error!("Line {} - No vertex found ({})",_line_count,line_data)
+            error!("Line {} - No vertex found ({})",_line_count,line_data);
         }
     }
 }

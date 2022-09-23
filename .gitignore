@@ -13,6 +13,8 @@ Cargo.lock
 *.swp
 
 # Local link to executable
+tsp
+tsp_rel
 
 # files for saving output for review
 output*
