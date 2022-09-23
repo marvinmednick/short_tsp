@@ -1,6 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use itertools::Itertools; use crate::unidirgraph::UnidirectionalGraph;
 use crate::minmax::{MinMax,MinMax::NA,MinMax::Value};
+//use crate::unidirgraph::Vertex;
 
 use log::{  info ,/* error ,*/ debug, /* warn ,*/ trace };
 
@@ -151,8 +152,8 @@ impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Displ
         self.tsp_distance = min_distance;
     }
 
-    pub fn define_vertex(&mut self, vertex: usize) {
-        self.graph.define_vertex(vertex);
+    pub fn define_vertex(&mut self, vertex: usize, xpos: f64, ypos: f64) {
+        self.graph.define_vertex(vertex,xpos,ypos);
     }
 
     pub fn define_edge(&mut self, v1: usize, v2: usize, distance: T) {
@@ -183,6 +184,11 @@ mod tests {
 
         let mut tsp = TSP::new();
 
+        // set position to all 0.0
+        for x in 1..=5  {
+            tsp.define_vertex(x,0.0,0.0);
+        }
+
         let mut i = 1;
         tsp.define_edge(1,2,i);   i+=1;
         tsp.define_edge(3,2,i);   i+=1;
@@ -207,6 +213,11 @@ mod tests {
 
         let mut tsp = TSP::new();
 
+        // set position to all 0.0
+        for x in 1..=4  {
+            tsp.define_vertex(x,0.0,0.0);
+        }
+
         let mut i = 1;
         tsp.define_edge(1,2,i);   i+=1;
         tsp.define_edge(3,2,i);   i+=1;
@@ -227,6 +238,10 @@ mod tests {
 
         let mut tsp = TSP::<f64>::new();
 
+        // set position to all 0.0
+        for x in 1..=4  {
+            tsp.define_vertex(x,0.0,0.0);
+        }
         let mut i = 1.0;
         tsp.define_edge(1,2,i);   i+=1.0;
         tsp.define_edge(3,2,i);   i+=1.0;
