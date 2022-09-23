@@ -1,9 +1,9 @@
-use std::collections::{HashMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet};
 
 
 #[derive(Debug,Clone)]
 struct TspGraph {
-    edges :  HashMap::<(usize,usize),i64>,
+    pub edges :  BTreeMap::<(usize,usize),i64>,
 //    sets:   BTreeMap<BTreeSet((usize,usize))>
 
 }
@@ -11,20 +11,30 @@ struct TspGraph {
 impl TspGraph {
 
     pub fn new() -> TspGraph {
-        TspGraph {  edges :  HashMap::<(usize,usize),i64>::new() }
+        TspGraph {  edges :  BTreeMap::<(usize,usize),i64>::new() }
     }
 
-    pub fn define_edge(&mut self, v1: usize, v2: usize, weight: i64) {
+    pub fn define_edge(&mut self, v1: usize, v2: usize, distance: i64) {
 
-        let new_edge_id = {  
-            if v1 <= v2 {
-                (v1, v2)
-            }
-            else {
-                (v2, v1)
-            }
-        };
-        self.edges.insert(new_edge_id, weight);
+        self.edges.insert(Self::edge_name(v1,v2), distance);
+    }
+
+    // creates a properly order edge name  tuple
+    // edge names between two vertex are defined to be (lower id, higher id)  in order to
+    // ensure that are consistent independent of how v1 and v2 are set  
+    // i.e  both v1=3, v2=2 and v1=2 and v2=3 both with result in (2,3) (the edge between 2 and 3)
+    pub fn edge_name(v1: usize, v2: usize) -> (usize, usize) {
+
+        if v1 <= v2 {
+            (v1, v2)
+        }
+        else {
+            (v2, v1)
+        }
+    }
+
+    pub fn get_distance(&self, v1: usize, v2: usize) -> i64 {
+        *self.edges.get(&Self::edge_name(v1,v2)).unwrap()
     }
 }
 
@@ -34,7 +44,7 @@ impl TspGraph {
 fn main() {
     
     // let mut map = BTreeMap::<Vec<u32>,String>::new();
-    let mut map = HashMap::<BTreeSet<(usize,usize)>,String>::new();
+    let mut map = BTreeMap::<BTreeSet<(usize,usize)>,String>::new();
     let vec1 = vec![(1,2),(2,3)];
     let bset1 = BTreeSet::from_iter(vec1.iter().cloned());
     let vec2 = vec![(3,4)];
@@ -76,7 +86,11 @@ fn main() {
     g.define_edge(3,5,i);   
 
 
-    println!("{:#?}",g);
+    println!("Edges");
+    for edge in &g.edges {
+        println!("{:?}",edge);
+    }
+    println!("---------------");
 
     use itertools::Itertools;
 
@@ -85,7 +99,7 @@ fn main() {
     let vertex : BTreeSet<usize> = BTreeSet::<usize>::from_iter(range.iter().cloned());
     println!("Vertex {:?}",vertex);
     let mut vertex_set = Vec::<BTreeSet<usize>>::new();
-    for size in 0..vertex.len() {
+    for size in 0..vertex.len()+1 {
         let vset = vertex.iter().combinations(size);
         for combo in vset {
             // for each set of combination of len 'size'
@@ -98,6 +112,7 @@ fn main() {
     }
     println!("Vertex Set {:?}", vertex_set);
 
+    let mut tsp_calc = BTreeMap::<BTreeSet::<usize>,i64>::new();
     for set in vertex_set {
         println!("Set {:?} ", set);
         let mut reduced_set = set.clone();
@@ -105,11 +120,27 @@ fn main() {
             reduced_set.remove(v);
             println!(" {:?} -> v:{} Min of:", reduced_set, v);
             if reduced_set.is_empty() {
-                println!(" Edge (1,{}) ", v);
+                let edge = TspGraph::edge_name(1,*v);
+                let edge_distance = g.get_distance(1,*v);
+                println!(" Edge (1,{}) i.e {:?} {}", v,edge, edge_distance);
+                tsp_calc.insert(set.clone(),edge_distance);
             }
             else {
+                let mut min_distance = i64::MAX;
                 for source in &reduced_set {
-                    println!( "   Set {:?} + edge ({},{})",reduced_set, source, v );
+                    let edge = TspGraph::edge_name(*source,*v);
+                    let edge_distance = g.get_distance(*source,*v);
+                    let set_weight = tsp_calc.get(&reduced_set).unwrap();
+                    let new_dist = set_weight + edge_distance;
+                    print!( "   Set {:?} dist: {}  + edge {:?} dist {} = total {}  cur_min {})",reduced_set, set_weight, edge, edge_distance, new_dist, min_distance);
+                    if new_dist < min_distance {
+                        min_distance = new_dist;
+                        tsp_calc.insert(set.clone(),new_dist);
+                        println!(" - Updating {:?} to {}",set,new_dist);
+                    }
+                    else {
+                        println!(" - Skipping");
+                    }
 
                 }
             }
