@@ -4,9 +4,9 @@ use crate::graphbuilder::GraphBuilder;
 
 #[derive(Debug,Clone)]
 pub struct Vertex {
-    vertex_id: usize,
-    xpos:  f64,
-    ypos: f64,
+    pub vertex_id: usize,
+    pub xpos:  f64,
+    pub ypos: f64,
 }
 
 #[derive(Debug,Clone)]

@@ -24,6 +24,11 @@ fn main() {
     g.define_edge(2,5,i);   i+=1;
     g.define_edge(3,5,i);   
 */
+
+    for x in 1..=5 {
+        tsp.define_vertex(x,x as f64,0.0);
+    }
+    tsp.generate_edges_by_dist();
     let mut i = 1.5;
     tsp.define_edge(1,2,i);   i+=1.1;
     tsp.define_edge(3,2,i);   i+=1.1;

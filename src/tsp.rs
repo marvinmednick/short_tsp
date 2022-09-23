@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use itertools::Itertools; use crate::unidirgraph::UnidirectionalGraph;
 use crate::minmax::{MinMax,MinMax::NA,MinMax::Value};
-//use crate::unidirgraph::Vertex;
+use crate::unidirgraph::Vertex;
 
 use log::{  info ,/* error ,*/ debug, /* warn ,*/ trace };
 
@@ -39,6 +39,24 @@ impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Displ
         self.vertex_sets.push(vertex_set);
     }
 
+
+    pub fn generate_edges_by_dist(&mut self) {
+        let mut vertex : BTreeSet<usize> = BTreeSet::<usize>::from_iter(self.graph.vertex_iter().cloned());
+        let vset = vertex.iter().combinations(2) ;
+        for combo in vset {
+            let vertex1 = self.graph.get_info(*combo[0]).unwrap();
+            let vertex2 = self.graph.get_info(*combo[1]).unwrap();
+
+            let dist = ( 
+                        (vertex1.xpos - vertex2.xpos).powf(2.0) + 
+                        (vertex1.ypos - vertex2.ypos).powf(2.0)
+                    ).sqrt();
+            trace!("Distance for v1 {} to v2 {} is {}",combo[0],combo[1],dist);
+            
+
+        }
+
+    }
 
     fn initialize(&mut self, starting_vertex: usize) {
         debug!("Starting Initialize");
