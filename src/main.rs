@@ -4,38 +4,33 @@ mod unidirgraph;
 use crate::unidirgraph::UnidirectionalGraph;
 
 
-fn main() {
-    
-    // let mut map = BTreeMap::<Vec<u32>,String>::new();
-    let mut map = BTreeMap::<BTreeSet<(usize,usize)>,String>::new();
-    let vec1 = vec![(1,2),(2,3)];
-    let bset1 = BTreeSet::from_iter(vec1.iter().cloned());
-    let vec2 = vec![(3,4)];
-    let bset2 = BTreeSet::from_iter(vec2.iter().cloned());
-    let vec3 = vec![(10,11),(12,13)];
-    let bset3 = BTreeSet::from_iter(vec3.iter().cloned());
-    let vec4 = vec![(1,2),(10,11),(12,13)];
-    let bset4 = BTreeSet::from_iter(vec4.iter().cloned());
-    let vec5 = vec![(3,4),(1,2),(1,4)];
-    let bset5 = BTreeSet::from_iter(vec5.iter().cloned());
-    println!("bset1 {:?} bset5 {:?}",bset1,bset5);
-    let mut bset6 = bset4.clone();
-    bset6.remove(&(10,11));
-    map.insert(bset1,"Vector 1: 1-2-3".to_string());
-    map.insert(bset2,"Vector 2: 3".to_string());
-    map.insert(bset3,"Vector 3: 10-12".to_string());
-    map.insert(bset4,"Vector 4: 1-10-12".to_string());
-    map.insert(bset5,"Vector 5: 1-2-3".to_string());
-    map.insert(bset6,"Vector 6: 10-12".to_string());
-    for (key, value) in map {
-        println!("{:?} {}",key, value);
-        for x in key {
-            println!("item {:?}", x);
+struct TSP {
+    pub  vertex_sets :  Vec<BTreeSet<usize>>,
+    path_calcs : BTreeMap<BTreeSet<usize>,i64>,
+}
+
+impl TSP {
+
+    pub fn new() -> TSP {
+        TSP {
+            vertex_sets: Vec::<BTreeSet<usize>>::new(),
+            path_calcs : BTreeMap::<BTreeSet::<usize>,i64>::new(),
         }
+
     }
 
+    pub fn add_set(&mut self, vertex_set : BTreeSet<usize>) {
+        self.vertex_sets.push(vertex_set);
+    }
+}
+
+fn main() {
+    
+    env_logger::init();
 
     let mut g = UnidirectionalGraph::new();
+    let mut tsp = TSP::new();
+
     let mut i = 1;
     g.define_edge(1,2,i);   i+=1;
     g.define_edge(3,2,i);   i+=1;
@@ -57,11 +52,18 @@ fn main() {
 
     use itertools::Itertools;
 
-    let range : Vec<usize> = (2..=5).into_iter().collect();
-    println!("Range {:?}",range);
-    let vertex : BTreeSet<usize> = BTreeSet::<usize>::from_iter(range.iter().cloned());
+ //   let range : Vec<usize> = (2..=5).into_iter().collect();
+ //   println!("Range {:?}",range);
+//    let mut vertex : BTreeSet<usize> = BTreeSet::<usize>::from_iter(range.iter().cloned());
+    let mut vertex : BTreeSet<usize> = BTreeSet::<usize>::from_iter(g.vertex_iter().cloned());
     println!("Vertex {:?}",vertex);
+//    println!("Vertex1 {:?}",vertex);
     let mut vertex_set = Vec::<BTreeSet<usize>>::new();
+
+    //remove the starting vertex
+    let starting_vertex : usize = 1;
+    vertex.remove(&starting_vertex);
+    
     for size in 0..vertex.len()+1 {
         let vset = vertex.iter().combinations(size);
         for combo in vset {
@@ -70,10 +72,12 @@ fn main() {
             let set = BTreeSet::<usize>::from_iter(
                 combo.into_iter().cloned().collect::<Vec<usize>>());
             println!("set {:?}", set );
-            vertex_set.push(set);
+            vertex_set.push(set.clone());
+            tsp.add_set(set);
         }
     }
     println!("Vertex Set {:?}", vertex_set);
+    println!("G Vertex sets {:?}", tsp.vertex_sets);
 
     let mut tsp_calc = BTreeMap::<BTreeSet::<usize>,i64>::new();
     for set in vertex_set {

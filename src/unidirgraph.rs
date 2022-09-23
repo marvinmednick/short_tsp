@@ -1,20 +1,32 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
+use log::{ /* info ,*/ error, debug, warn, trace };
 
 #[derive(Debug,Clone)]
 pub struct UnidirectionalGraph {
+    pub vertex : BTreeSet<usize>,
     pub edges :  BTreeMap::<(usize,usize),i64>,
-//    sets:   BTreeMap<BTreeSet((usize,usize))>
 
 }
 
 impl UnidirectionalGraph {
 
     pub fn new() -> UnidirectionalGraph {
-        UnidirectionalGraph {  edges :  BTreeMap::<(usize,usize),i64>::new() }
+        UnidirectionalGraph {  
+            edges :  BTreeMap::<(usize,usize),i64>::new(),
+            vertex : BTreeSet::<usize>::new(),
+        }
+    }
+
+    pub fn define_vertex(&mut self,vertex: usize) {
+        self.vertex.insert(vertex);
+        debug!("Adding Vertex {}", vertex)
+
     }
 
     pub fn define_edge(&mut self, v1: usize, v2: usize, distance: i64) {
 
+        self.define_vertex(v1);
+        self.define_vertex(v2);
         self.edges.insert(Self::edge_name(v1,v2), distance);
     }
 
@@ -34,6 +46,14 @@ impl UnidirectionalGraph {
 
     pub fn get_distance(&self, v1: usize, v2: usize) -> i64 {
         *self.edges.get(&Self::edge_name(v1,v2)).unwrap()
+    }
+
+    pub fn num_vertex(&self) -> usize {
+        self.vertex.len()
+    }
+
+    pub fn vertex_iter(&self) -> std::collections::btree_set::Iter<usize> {
+        self.vertex.iter()
     }
 }
 
