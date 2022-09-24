@@ -4,22 +4,29 @@ use itertools::Itertools;
 mod unidirgraph;
 use crate::unidirgraph::UnidirectionalGraph;
 
-use log::{ /* info ,*/ error, debug, warn, trace };
+use log::{  info ,/* error ,*/ debug, /* warn ,*/ trace };
 use std::process::exit;
 
+#[derive(Debug,Clone)]
+struct PathInfo {
+    distance: i64,
+    prev: usize,
+}
 
 struct TSP {
+    pub vertex: BTreeSet<usize>,
     pub  vertex_sets :  Vec<BTreeSet<usize>>,
-    path_calcs : BTreeMap<BTreeSet<usize>,i64>,
-    graph: UnidirectionalGraph,
+    path_calcs : BTreeMap<(BTreeSet<usize>,usize),PathInfo>,
+    pub graph: UnidirectionalGraph,
 }
 
 impl TSP {
 
     pub fn new() -> TSP {
         TSP {
+            vertex:    BTreeSet::<usize>::new(),
             vertex_sets: Vec::<BTreeSet<usize>>::new(),
-            path_calcs : BTreeMap::<BTreeSet::<usize>,i64>::new(),
+            path_calcs : BTreeMap::<(BTreeSet::<usize>,usize),PathInfo>::new(),
             graph: UnidirectionalGraph::new(),
         }
 
@@ -51,40 +58,73 @@ impl TSP {
                 self.add_set(set);
             }
         }
+        self.vertex = vertex;
+
+    }
+
+    pub fn find_path(&self, vertex_set: &BTreeSet<usize>, last_vertex: usize) {
+        let mut path = Vec::<usize>::new();
+        let mut reduced_set = vertex_set.clone();
+
+        let mut cur_vertex = last_vertex;
+        trace!("Paths are: {:?}",self.path_calcs);
+        path.push(cur_vertex);
+        while !reduced_set.is_empty() {
+            trace!("Added  {}  to path, new set now {:?}",cur_vertex,reduced_set);
+            let previous = self.path_calcs.get(&(reduced_set.clone(),cur_vertex)).unwrap().prev;
+            reduced_set.remove(&cur_vertex);
+            trace!("Added  {}  to path, new set now {:?}, previous {}",cur_vertex,reduced_set,previous);
+            path.push(previous);
+            cur_vertex = previous;
+        }
+        trace!("TSP Path is {:?}",path);
 
     }
 
 
-
-    pub fn calculate_tsp_path(&mut self, g : &UnidirectionalGraph ) {
+    pub fn calculate_tsp_path(&mut self) {
 
         for set in &self.vertex_sets {
-            println!("Set {:?} ", set);
+            info!("Set {:?} ", set);
             let mut reduced_set = set.clone();
             for v in set {
                 reduced_set.remove(v);
                 trace!(" {:?} -> v:{} Min of:", reduced_set, v);
                 if reduced_set.is_empty() {
+        //            println!("Edges i{:#?}",self.graph);
                     let edge = UnidirectionalGraph::edge_name(1,*v);
-                    let edge_distance = g.get_distance(1,*v);
+                    let edge_distance = self.graph.get_distance(1,*v);
                     trace!(" Edge (1,{}) i.e {:?} {}", v,edge, edge_distance);
-                    self.path_calcs.insert(set.clone(),edge_distance);
+                    self.path_calcs.insert(
+                        (set.clone(),*v),
+                        PathInfo { 
+                            distance: edge_distance, 
+                            prev: 1, 
+                        }
+                    );
                 }
                 else {
-                    let mut min_distance = i64::MAX;
                     for source in &reduced_set {
+                        let mut min_distance = i64::MAX;
                         let edge = UnidirectionalGraph::edge_name(*source,*v);
-                        let edge_distance = g.get_distance(*source,*v);
-                        let set_weight = self.path_calcs.get(&reduced_set).unwrap();
+                        let edge_distance = self.graph.get_distance(*source,*v);
+                        let set_weight = self.path_calcs.get(&(reduced_set.clone(),*source)).unwrap().distance;
                         let new_dist = set_weight + edge_distance;
-                        trace!( "   Set {:?} to {} via {}: set dist: {} + edge ({},{}) dist {} = total {}  cur_min {})",reduced_set, v, source, set_weight, source, v, edge_distance, new_dist, min_distance);
+                        let trace_str = format!( "      Set {:?} to {} via {} : sd {}+ ({},{}) d {} = {} cur {})",
+                                    reduced_set, v, source, set_weight, source, v, edge_distance, new_dist, min_distance);
                         if new_dist < min_distance {
                             min_distance = new_dist;
-                            self.path_calcs.insert(set.clone(),new_dist);
-                            trace!(" - Updating {:?} to {}",set,new_dist);
+                            self.path_calcs.insert(
+                                (set.clone(),*v),
+                                PathInfo {
+                                    distance: new_dist, 
+                                    prev: *source,
+                                    }
+                            );
+                            trace!("{} - Updating {:?},{} to {}",trace_str, set,v, new_dist);
                         }
                         else {
-                            trace!(" - Skipping");
+                            trace!("{} - Skipping",trace_str, );
                         }
 
                     }
@@ -92,6 +132,19 @@ impl TSP {
                 reduced_set.insert(*v);
             }
         }
+        let mut min_distance = i64::MAX;
+        let mut final_vertex : usize = 0;
+        for last_vertex in &self.vertex {
+            let set_weight = self.path_calcs.get(&(self.vertex.clone(),*last_vertex)).unwrap().distance;
+            let edge_distance = self.graph.get_distance(1,*last_vertex);
+            let new_weight = set_weight + edge_distance;
+            if new_weight < min_distance {
+                min_distance = new_weight;
+                final_vertex = *last_vertex;
+            }
+        }
+        println!("TSP Distance {} last vertex is {}", min_distance,final_vertex);use std::process::exit;
+        self.find_path(&self.vertex,final_vertex);
     }
 
     pub fn define_vertex(&mut self, vertex: usize) {
@@ -108,9 +161,9 @@ fn main() {
     
     env_logger::init();
 
-    let mut g = UnidirectionalGraph::new();
+//    let mut g = UnidirectionalGraph::new();
     let mut tsp = TSP::new();
-
+/*
     let mut i = 1;
     g.define_edge(1,2,i);   i+=1;
     g.define_edge(3,2,i);   i+=1;
@@ -122,29 +175,29 @@ fn main() {
     g.define_edge(2,4,i);   i+=1;
     g.define_edge(2,5,i);   i+=1;
     g.define_edge(3,5,i);   
-
+*/
     let mut i = 1;
     tsp.define_edge(1,2,i);   i+=1;
     tsp.define_edge(3,2,i);   i+=1;
     tsp.define_edge(3,4,i);   i+=1;
-    tsp.define_edge(4,5,i);   i+=1;
-    tsp.define_edge(1,3,i);   i+=1;
     tsp.define_edge(1,4,i);   i+=1;
-    tsp.define_edge(1,5,i);   i+=1;
+    tsp.define_edge(1,3,i);   i+=1;
     tsp.define_edge(2,4,i);   i+=1;
-    tsp.define_edge(2,5,i);   i+=1;
-    tsp.define_edge(3,5,i);   
+    //tsp.define_edge(4,5,i);   i+=1;
+    //tsp.define_edge(1,5,i);   i+=1;
+    //tsp.define_edge(2,5,i);   i+=1;
+    //tsp.define_edge(3,5,i);   
 
-    println!("Edges");
-    for edge in &g.edges {
-        println!("{:?}",edge);
+    info!("Edges");
+    for edge in &tsp.graph.edges {
+        info!("{:?}",edge);
     }
-    println!("---------------");
-
+    info!("---------------");
+/*
  //   let range : Vec<usize> = (2..=5).into_iter().collect();
  //   println!("Range {:?}",range);
 //    let mut vertex : BTreeSet<usize> = BTreeSet::<usize>::from_iter(range.iter().cloned());
-    let mut vertex : BTreeSet<usize> = BTreeSet::<usize>::from_iter(g.vertex_iter().cloned());
+    //let mut vertex : BTreeSet<usize> = BTreeSet::<usize>::from_iter(g.vertex_iter().cloned());
     println!("Vertex {:?}",vertex);
 //    println!("Vertex1 {:?}",vertex);
     let mut vertex_set = Vec::<BTreeSet<usize>>::new();
@@ -167,13 +220,14 @@ fn main() {
     }
     println!("Vertex Set {:?}", vertex_set);
     println!("G Vertex sets {:?}", tsp.vertex_sets);
-
+*/
     trace!("Calling Init");
     tsp.initialize(1);
 
     trace!("Calling Calcuate");
-    tsp.calculate_tsp_path(&g);
+    tsp.calculate_tsp_path();
 
+/*
     exit(0);
     println!("Old ..  ");
 
@@ -213,6 +267,6 @@ fn main() {
         }
         println!();
     }
-
+*/
 
 }
