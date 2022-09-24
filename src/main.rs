@@ -180,13 +180,13 @@ fn main() {
     tsp.define_edge(1,2,i);   i+=1;
     tsp.define_edge(3,2,i);   i+=1;
     tsp.define_edge(3,4,i);   i+=1;
+    tsp.define_edge(4,5,i);   i+=1;   
+    tsp.define_edge(1,5,i);   i+=1;
     tsp.define_edge(1,4,i);   i+=1;
     tsp.define_edge(1,3,i);   i+=1;
     tsp.define_edge(2,4,i);   i+=1;
-    //tsp.define_edge(4,5,i);   i+=1;
-    //tsp.define_edge(1,5,i);   i+=1;
-    //tsp.define_edge(2,5,i);   i+=1;
-    //tsp.define_edge(3,5,i);   
+    tsp.define_edge(2,5,i);   i+=1;
+    tsp.define_edge(3,5,i);   // i+=1;
 
     info!("Edges");
     for edge in &tsp.graph.edges {
