@@ -4,6 +4,7 @@ use crate::minmax::{MinMax,MinMax::NA,MinMax::Value};
 use crate::unidirgraph::Vertex;
 use crate::graphbuilder::GraphBuilder;
 use crate::memtrack::MemTrack;
+use crate::bitset::{BitSet32,u32_to_vec};
 
 use log::{  info ,/* error ,*/ debug, /* warn ,*/ trace };
 
@@ -56,7 +57,7 @@ impl<T: PartialOrd+ std::fmt::Debug+Copy+std::fmt::Display> GraphBuilder for &mu
 impl TSP<f32> {
     pub fn generate_edges_by_dist(&mut self) {
 
-        let vertex : BTreeSet<usize> = BTreeSet::<usize>::from_iter(self.graph.vertex_iter().cloned());
+        let vertex : Vec<usize> = self.graph.vertex_iter().cloned().collect();
         let vset = vertex.iter().combinations(2) ;
         for combo in vset {
             let vertex1 = self.graph.get_info(*combo[0]).unwrap();

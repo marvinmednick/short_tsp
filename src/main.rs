@@ -5,6 +5,7 @@ mod graphbuilder;
 mod cmd_line;
 mod parse;
 mod memtrack;
+mod bitset;
 
 use crate::cmd_line::CommandArgs;
 use crate::memtrack::MemTrack;
