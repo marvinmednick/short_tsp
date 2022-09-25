@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap};
 use itertools::Itertools; use crate::unidirgraph::UnidirectionalGraph;
 use crate::minmax::{MinMax,MinMax::NA,MinMax::Value};
 use crate::unidirgraph::Vertex;
@@ -103,12 +103,10 @@ impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Displ
     fn initialize(&mut self, starting_vertex: usize) {
         debug!("Starting Initialize");
         // creat a set with all the vertexes in it
-        let mut vertex : BTreeSet<usize> = BTreeSet::<usize>::from_iter(self.graph.vertex_iter().cloned());
         let mut vertex_set = BitSet32::new();
         vertex_set.add_from_vec(&self.graph.vertex_iter().cloned().collect());
         
         //remove the starting vertex from set before generating all the combinations
-        vertex.remove(&starting_vertex);
         vertex_set.remove(starting_vertex);
         let vertex_set_list = vertex_set.get_vec();
 
@@ -121,8 +119,6 @@ impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Displ
                 let set_contents = combo.into_iter().cloned().collect::<Vec<usize>>();
                 let mut set = BitSet32::new();
                 set.add_from_vec(&set_contents);
-//                let set_old = BTreeSet::<usize>::from_iter(
- //                   combo.into_iter().cloned().collect::<Vec<usize>>());
                 trace!("set {:?}", set );
                 self.add_set(set.get_set_id());
             }
