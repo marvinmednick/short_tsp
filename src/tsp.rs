@@ -10,21 +10,21 @@ use log::{  info ,/* error ,*/ debug, /* warn ,*/ trace };
 
 #[derive(Debug,Clone)]
 struct PathCalc<T> {
-    path_calcs : BTreeMap<(BTreeSet<usize>,usize),PathInfo<T>>,
+    path_calcs : BTreeMap<(u32,usize),PathInfo<T>>,
 }
 
 
 impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Display+std::ops::Add<Output = T>> PathCalc<T>{
 
     pub fn new() -> PathCalc<T> {
-            PathCalc::<T> { path_calcs : BTreeMap::<(BTreeSet::<usize>,usize),PathInfo<T>>::new() }
+            PathCalc::<T> { path_calcs : BTreeMap::<(u32,usize),PathInfo<T>>::new() }
     }
 
-    pub fn insert(&mut self, location: (BTreeSet::<usize>,usize), data: PathInfo<T>) {
+    pub fn insert(&mut self, location: (u32,usize), data: PathInfo<T>) {
             self.path_calcs.insert(location,data);
     }
 
-    pub fn get(&self, location: &(BTreeSet::<usize>,usize)) ->  Option<&PathInfo<T>> {
+    pub fn get(&self, location: &(u32,usize)) ->  Option<&PathInfo<T>> {
         self.path_calcs.get(location)
     }
 }
@@ -36,10 +36,11 @@ pub struct PathInfo<T> {
 }
 
 pub struct TSP<T> {
-    pub vertex: BTreeSet<usize>,
-    pub  vertex_sets :  Vec<BTreeSet<usize>>,
+    vertex: Vec<usize>,
+    vertex_set_id:  u32,
+    vertex_sets :  Vec<u32>,
     pc : PathCalc<T>,
-    pub graph: UnidirectionalGraph<T>,
+    graph: UnidirectionalGraph<T>,
     tsp_path:  Vec<usize>,
     tsp_distance: MinMax<T>,
     mc: MemTrack,
@@ -81,8 +82,9 @@ impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Displ
 
     pub fn new() -> TSP<T> {
         TSP {
-            vertex:    BTreeSet::<usize>::new(),
-            vertex_sets: Vec::<BTreeSet<usize>>::new(),
+            vertex:    Vec::<usize>::new(),
+            vertex_set_id:  0,
+            vertex_sets: Vec::<u32>::new(),
             pc : PathCalc::<T>::new(),
             graph: UnidirectionalGraph::<T>::new(),
             tsp_path:  Vec::<usize>::new(),
@@ -92,7 +94,7 @@ impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Displ
 
     }
 
-    pub fn add_set(&mut self, vertex_set : BTreeSet<usize>) {
+    pub fn add_set(&mut self, vertex_set : u32) {
         trace!("adding Set {:?}",vertex_set);
         self.vertex_sets.push(vertex_set);
     }
@@ -102,38 +104,47 @@ impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Displ
         debug!("Starting Initialize");
         // creat a set with all the vertexes in it
         let mut vertex : BTreeSet<usize> = BTreeSet::<usize>::from_iter(self.graph.vertex_iter().cloned());
+        let mut vertex_set = BitSet32::new();
+        vertex_set.add_from_vec(&self.graph.vertex_iter().cloned().collect());
         
         //remove the starting vertex from set before generating all the combinations
         vertex.remove(&starting_vertex);
+        vertex_set.remove(starting_vertex);
+        let vertex_set_list = vertex_set.get_vec();
 
         // generation the list of vertex sets that we will need
-        for size in 0..vertex.len()+1 {
-            let vset = vertex.iter().combinations(size);
+        for size in 0..=vertex_set_list.len() {
+            let vset = vertex_set_list.iter().combinations(size);
             for combo in vset {
                 // for each set of combination of len 'size'
                 // create 
-                let set = BTreeSet::<usize>::from_iter(
-                    combo.into_iter().cloned().collect::<Vec<usize>>());
+                let set_contents = combo.into_iter().cloned().collect::<Vec<usize>>();
+                let mut set = BitSet32::new();
+                set.add_from_vec(&set_contents);
+//                let set_old = BTreeSet::<usize>::from_iter(
+ //                   combo.into_iter().cloned().collect::<Vec<usize>>());
                 trace!("set {:?}", set );
-                self.add_set(set);
+                self.add_set(set.get_set_id());
             }
         }
         self.mc.debug_mem_info(&"After TSP Init".to_string());
-        self.vertex = vertex;
+        self.vertex = vertex_set_list;
+        self.vertex_set_id =  vertex_set.get_set_id();
 
     }
 
-    pub fn find_path(&self, vertex_set: &BTreeSet<usize>, last_vertex: usize) -> Vec<usize> {
+    pub fn find_path(&self, vertex_set: &Vec<usize>, last_vertex: usize) -> Vec<usize> {
         let mut path = Vec::<usize>::new();
-        let mut reduced_set = vertex_set.clone();
+        let mut reduced_set = BitSet32::new();
+        reduced_set.add_from_vec(vertex_set);
 
         let mut cur_vertex = last_vertex;
         trace!("Paths are: {:?}",self.pc);
         path.push(cur_vertex);
         while !reduced_set.is_empty() {
             trace!("Added  {}  to path, new set now {:?}",cur_vertex,reduced_set);
-            let previous = self.pc.get(&(reduced_set.clone(),cur_vertex)).unwrap().prev;
-            reduced_set.remove(&cur_vertex);
+            let previous = self.pc.get(&(reduced_set.get_set_id(),cur_vertex)).unwrap().prev;
+            reduced_set.remove(cur_vertex);
             trace!("Added  {}  to path, new set now {:?}, previous {}",cur_vertex,reduced_set,previous);
             path.push(previous);
             cur_vertex = previous;
@@ -151,7 +162,8 @@ impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Displ
         let mut set_count = self.vertex_sets.len();
         let mut _count = 0;
         info!("Processing {} sets",set_count);
-        for set in &self.vertex_sets {
+        for bit_set in &self.vertex_sets {
+            let set = BitSet32::from_u32(*bit_set);
             _count += 1;
             trace!("Starting Set {:?} size: {}", set,set.len());
             self.mc.debug_mem_change(&format!("In set #{}  {:?}",_count,set));
@@ -160,26 +172,26 @@ impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Displ
                 size_of_set = reduced_set.len();
                 info!("Processing sets of size {}",size_of_set);
             }
-            for v in set {
+            for v in set.get_vec() {
                 reduced_set.remove(v);
                 trace!(" {:?} -> v:{} Min of:", reduced_set, v);
                 if reduced_set.is_empty() {
         //            println!("Edges i{:#?}",self.graph);
-                    let edge = UnidirectionalGraph::<T>::edge_name(1,*v);
-                    let edge_distance = self.graph.get_distance(1,*v);
+                    let edge = UnidirectionalGraph::<T>::edge_name(1,v);
+                    let edge_distance = self.graph.get_distance(1,v);
                     trace!(" Edge (1,{}) i.e {:?} {}", v,edge, edge_distance);
                     let pi = PathInfo { 
                             distance: edge_distance, 
                             prev: 1, 
                         };
-                    self.pc.insert((set.clone(),*v),pi);
+                    self.pc.insert((set.get_set_id(),v),pi);
                 }
                 else {
                     let mut min_distance = MinMax::NA;
-                    for source in &reduced_set {
-                        let edge = UnidirectionalGraph::<T>::edge_name(*source,*v);
-                        let edge_distance = self.graph.get_distance(*source,*v);
-                        let set_weight = self.pc.get(&(reduced_set.clone(),*source)).unwrap().distance;
+                    for source in reduced_set.get_vec() {
+                        let edge = UnidirectionalGraph::<T>::edge_name(source,v);
+                        let edge_distance = self.graph.get_distance(source,v);
+                        let set_weight = self.pc.get(&(reduced_set.get_set_id(),source)).unwrap().distance;
                         let new_dist = set_weight + edge_distance;
                         let trace_str = format!("Set {:?} to {} via {} : sd {}+ ({},{}) d {} = {} cur {})",
                                     reduced_set, v, source, set_weight, source, v, edge_distance, new_dist, min_distance);
@@ -189,9 +201,9 @@ impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Displ
                             min_distance = Value(new_dist);
                             let pi = PathInfo {
                                     distance: new_dist, 
-                                    prev: *source,
+                                    prev: source,
                                     };
-                            self.pc.insert( (set.clone(),*v),pi);
+                            self.pc.insert( (set.get_set_id(),v),pi);
 //                            trace!("{} - Updating {:?},{} to {}",trace_str, set,v, new_dist);
                             debug!("{:?},{} now {} (was {})",set,v,new_dist,old_min_dist);
                         }
@@ -201,14 +213,14 @@ impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Displ
 
                     }
                 }
-                reduced_set.insert(*v);
+                reduced_set.insert(v);
             }
         }
 
         let mut min_distance = MinMax::NA;
         let mut final_vertex : usize = 0;
         for last_vertex in &self.vertex {
-            let set_weight = self.pc.get(&(self.vertex.clone(),*last_vertex)).unwrap().distance;
+            let set_weight = self.pc.get(&(self.vertex_set_id,*last_vertex)).unwrap().distance;
             let edge_distance = self.graph.get_distance(1,*last_vertex);
             let new_weight = set_weight + edge_distance;
             if Value(new_weight) < min_distance {

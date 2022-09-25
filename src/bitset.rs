@@ -2,6 +2,7 @@ use itertools::Itertools;
 use bitmaps::Bitmap;
 
 
+#[derive(Debug,Clone)]
 pub struct BitSet32 {
     bitmap: Bitmap<32>, 
 }
@@ -13,6 +14,22 @@ impl BitSet32 {
         BitSet32 { bitmap: Bitmap::new()}
     }
 
+    pub fn from_u32(value : u32 ) -> BitSet32 {
+        BitSet32 { bitmap: Bitmap::<32_usize>::from_value(value) }
+    }
+    
+    pub fn len(&self) -> usize {
+        self.bitmap.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.bitmap.len() == 0
+    }
+
+    pub fn insert(&mut self, member: usize) {
+        self.add(member);
+    }
+
     pub fn add(&mut self, member: usize) {
         if member < 32 {
             self.bitmap.set(member, true);
@@ -21,7 +38,7 @@ impl BitSet32 {
             panic!("member {} out of range (max 32)",member);
         }
     }
-    
+
     pub fn remove(&mut self, member: usize) {
         if member < 32 {
             self.bitmap.set(member, false);
@@ -31,9 +48,9 @@ impl BitSet32 {
         }
     }
 
-    pub fn add_from_vec(&mut self, list: Vec<usize>) {
+    pub fn add_from_vec(&mut self, list: &Vec<usize>) {
         for item in list {
-            self.add(item);
+            self.add(*item);
         }
     }
 
@@ -53,7 +70,6 @@ pub fn u32_to_vec(value: u32) -> Vec<usize> {
 
     let mut remaining = value;
     let mut result = Vec::<usize>::new();
-
 
     let mut index  : usize = 0;
     while remaining > 0 {
