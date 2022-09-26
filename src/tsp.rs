@@ -10,23 +10,37 @@ use log::{  info ,/* error ,*/ debug, /* warn ,*/ trace };
 
 #[derive(Debug,Clone)]
 struct PathCalc<T> {
-    path_calcs : BTreeMap<(u32,usize),PathInfo<T>>,
+    path_calcs : Vec<BTreeMap<(u32,usize),PathInfo<T>>>,
 }
 
 
 impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Display+std::ops::Add<Output = T>> PathCalc<T>{
 
-    pub fn new() -> PathCalc<T> {
-            PathCalc::<T> { path_calcs : BTreeMap::<(u32,usize),PathInfo<T>>::new() }
+    pub fn new(size: usize) -> PathCalc<T> {
+            let mut calcs = Vec::<BTreeMap::<(u32,usize),PathInfo<T>>>::new();
+            for i in 0..size {
+                calcs.push(BTreeMap::<(u32,usize),PathInfo<T>>::new() );
+            }
+
+            PathCalc::<T> { path_calcs : calcs }
     }
 
     pub fn insert(&mut self, location: (u32,usize), data: PathInfo<T>) {
-            self.path_calcs.insert(location,data);
+        let index : usize = location.0.count_ones() as usize;
+        trace!("Adding to path to index {}",index);
+
+        self.path_calcs[index].insert(location,data);
     }
 
     pub fn get(&self, location: &(u32,usize)) ->  Option<&PathInfo<T>> {
-        self.path_calcs.get(location)
+        let index : usize = location.0.count_ones() as usize;
+        self.path_calcs[index].get(location)
     }
+
+    pub fn clear_index(&mut self, index: usize) {
+        self.path_calcs[index].clear();
+    }
+
 }
 
 #[derive(Debug,Clone)]
@@ -93,7 +107,7 @@ impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Displ
             vertex:    Vec::<usize>::new(),
             vertex_set_id:  0,
             vertex_sets: Vec::<u32>::new(),
-            pc : PathCalc::<T>::new(),
+            pc : PathCalc::<T>::new(32),
             graph: UnidirectionalGraph::<T>::new(),
             tsp_path:  Vec::<usize>::new(),
             tsp_distance: MinMax::NA,
@@ -169,7 +183,14 @@ impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Displ
         let mut set_count = self.vertex_sets.len();
         let mut _count = 0;
         info!("Processing {} sets",set_count);
-        for bit_set in &self.vertex_sets {
+        let num_sets = self.vertex_sets.len();
+        for set_num in 0..num_sets {
+            let mut bit_set = self.vertex_sets.get_mut(set_num).unwrap();
+            let set_size = bit_set.count_ones() as usize;
+            if set_size >  2 {
+                trace!("Dropping sets of size {}",set_size-2);
+                self.pc.clear_index(set_size-2);
+            }
             let set = BitSet32::from_u32(*bit_set);
             _count += 1;
             trace!("Starting Set {:?} size: {}", set,set.len());
@@ -195,6 +216,7 @@ impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Displ
                     for source in reduced_set.get_vec() {
                         let edge = UnidirectionalGraph::<T>::edge_name(source,v);
                         let edge_distance = self.graph.get_distance(source,v);
+                        trace!("Getting weight ({}),{}",reduced_set.get_set_id(),source);
                         let set_weight = self.pc.get(&(reduced_set.get_set_id(),source)).unwrap().distance;
                         let new_dist = set_weight + edge_distance;
                         let trace_str = format!("Set {:?} to {} via {} : sd {}+ ({},{}) d {} = {} cur {})",
