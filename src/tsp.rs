@@ -3,6 +3,7 @@ use itertools::Itertools; use crate::unidirgraph::UnidirectionalGraph;
 use crate::minmax::{MinMax,MinMax::NA,MinMax::Value};
 use crate::unidirgraph::Vertex;
 use crate::graphbuilder::GraphBuilder;
+use crate::memtrack::MemTrack;
 
 use log::{  info ,/* error ,*/ debug, /* warn ,*/ trace };
 
@@ -19,18 +20,19 @@ pub struct TSP<T> {
     pub graph: UnidirectionalGraph<T>,
     tsp_path:  Vec<usize>,
     tsp_distance: MinMax<T>,
+    mc: MemTrack,
 }
 
 
 impl<T: PartialOrd+ std::fmt::Debug+Copy+std::fmt::Display> GraphBuilder for &mut TSP<T>{
-    fn add_vertex(&mut self, id:  usize, xpos: f64, ypos: f64) {
+    fn add_vertex(&mut self, id:  usize, xpos: f32, ypos: f32) {
         self.graph.define_vertex(id, xpos, ypos);
     }
 }
 
 
 
-impl TSP<f64> {
+impl TSP<f32> {
     pub fn generate_edges_by_dist(&mut self) {
 
         let vertex : BTreeSet<usize> = BTreeSet::<usize>::from_iter(self.graph.vertex_iter().cloned());
@@ -63,6 +65,7 @@ impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Displ
             graph: UnidirectionalGraph::<T>::new(),
             tsp_path:  Vec::<usize>::new(),
             tsp_distance: MinMax::NA,
+            mc:  MemTrack::new(),
         }
 
     }
@@ -93,6 +96,7 @@ impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Displ
                 self.add_set(set);
             }
         }
+        self.mc.debug_mem_info(&"After TSP Init".to_string());
         self.vertex = vertex;
 
     }
@@ -121,9 +125,19 @@ impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Displ
     pub fn calculate(&mut self, starting_vertex: usize) {
 
         self.initialize(starting_vertex);
+        let mut size_of_set = 0;
+        let mut set_count = self.vertex_sets.len();
+        let mut _count = 0;
+        info!("Processing {} sets",set_count);
         for set in &self.vertex_sets {
-            trace!("Set {:?} ", set);
+            _count += 1;
+            trace!("Starting Set {:?} ", set);
+            self.mc.debug_mem_change(&format!("In set #{}  {:?}",_count,set));
             let mut reduced_set = set.clone();
+            if size_of_set != reduced_set.len() {
+                size_of_set = reduced_set.len();
+                info!("Processing sets of size {}",size_of_set);
+            }
             for v in set {
                 reduced_set.remove(v);
                 trace!(" {:?} -> v:{} Min of:", reduced_set, v);
@@ -188,7 +202,7 @@ impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Displ
         self.tsp_distance = min_distance;
     }
 
-    pub fn define_vertex(&mut self, vertex: usize, xpos: f64, ypos: f64) {
+    pub fn define_vertex(&mut self, vertex: usize, xpos: f32, ypos: f32) {
         self.graph.define_vertex(vertex,xpos,ypos);
     }
 
@@ -271,7 +285,7 @@ mod tests {
     #[test]
     fn test_float_4() {
         init_log();
-        let mut tsp = TSP::<f64>::new();
+        let mut tsp = TSP::<f32>::new();
 
         // set position to all 0.0
         for x in 1..=4  {
@@ -294,7 +308,7 @@ mod tests {
     #[test]
     fn test_float_10_4() {
         init_log();
-        let mut tsp = TSP::<f64>::new();
+        let mut tsp = TSP::<f32>::new();
         tsp.define_vertex(1, 3.433752748235324,2.9215164273513206);
         tsp.define_vertex(2, 0.266027289402357, 3.367553812393056);
         tsp.define_vertex(3, 3.107592426409198, 3.091359997997841);
@@ -314,7 +328,7 @@ mod tests {
     #[test]
     fn test_float_1_2() {
         init_log();
-        let mut tsp = TSP::<f64>::new();
+        let mut tsp = TSP::<f32>::new();
         tsp.define_vertex(1,1.185111439847509,1.1487624635211768);
         tsp.define_vertex(2,1.4444704252469853,1.9471010355780376);
         tsp.generate_edges_by_dist();

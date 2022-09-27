@@ -5,8 +5,8 @@ use crate::graphbuilder::GraphBuilder;
 #[derive(Debug,Clone)]
 pub struct Vertex {
     pub vertex_id: usize,
-    pub xpos:  f64,
-    pub ypos: f64,
+    pub xpos:  f32,
+    pub ypos: f32,
 }
 
 #[derive(Debug,Clone)]
@@ -19,7 +19,7 @@ pub struct UnidirectionalGraph<T> {
 
 
 impl<T: PartialOrd+ std::fmt::Debug+Copy+std::fmt::Display> GraphBuilder for &mut UnidirectionalGraph<T>{
-    fn add_vertex(&mut self, id:  usize, xpos: f64, ypos: f64) {
+    fn add_vertex(&mut self, id:  usize, xpos: f32, ypos: f32) {
         self.define_vertex(id, xpos, ypos);
     }
 }
@@ -35,7 +35,7 @@ impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::fmt::Display> Unidirecti
         }
     }
 
-    pub fn define_vertex(&mut self,vertex_id: usize, xpos: f64, ypos: f64 ) {
+    pub fn define_vertex(&mut self,vertex_id: usize, xpos: f32, ypos: f32 ) {
         self.vertex_info.insert(vertex_id, Vertex {  vertex_id, xpos, ypos });
         self.vertex.insert(vertex_id);
         debug!("Adding Vertex {} ({},{})", vertex_id, xpos, ypos);

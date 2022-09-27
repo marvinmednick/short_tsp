@@ -49,11 +49,11 @@ where F: GraphBuilder,
 
             let text_xpos = caps.name("xpos").map_or("", |m| m.as_str());
             trace!("Text_xpos  = {} caps {:?}",text_xpos,caps);
-            let xpos = text_xpos.parse::<f64>().unwrap();
+            let xpos = text_xpos.parse::<f32>().unwrap();
 
             let text_ypos = caps.name("ypos").map_or("", |m| m.as_str());
             trace!("Text_ypos  = {} caps {:?}",text_ypos,caps);
-            let ypos = text_ypos.parse::<f64>().unwrap();
+            let ypos = text_ypos.parse::<f32>().unwrap();
 
             graph_functions.add_vertex(vertex_count,xpos, ypos);
 
