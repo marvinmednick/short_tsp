@@ -37,7 +37,6 @@ pub struct PathInfo<T> {
 pub struct TSP<T> {
     pub vertex: BTreeSet<usize>,
     pub  vertex_sets :  Vec<BTreeSet<usize>>,
-    path_calcs : BTreeMap<(BTreeSet<usize>,usize),PathInfo<T>>,
     pc : PathCalc<T>,
     pub graph: UnidirectionalGraph<T>,
     tsp_path:  Vec<usize>,
@@ -83,7 +82,6 @@ impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Displ
         TSP {
             vertex:    BTreeSet::<usize>::new(),
             vertex_sets: Vec::<BTreeSet<usize>>::new(),
-            path_calcs : BTreeMap::<(BTreeSet::<usize>,usize),PathInfo<T>>::new(),
             pc : PathCalc::<T>::new(),
             graph: UnidirectionalGraph::<T>::new(),
             tsp_path:  Vec::<usize>::new(),
@@ -129,7 +127,7 @@ impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Displ
         let mut reduced_set = vertex_set.clone();
 
         let mut cur_vertex = last_vertex;
-        trace!("Paths are: {:?}",self.path_calcs);
+        trace!("Paths are: {:?}",self.pc);
         path.push(cur_vertex);
         while !reduced_set.is_empty() {
             trace!("Added  {}  to path, new set now {:?}",cur_vertex,reduced_set);
@@ -173,7 +171,6 @@ impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Displ
                             distance: edge_distance, 
                             prev: 1, 
                         };
-                    self.path_calcs.insert((set.clone(),*v),pi.clone());
                     self.pc.insert((set.clone(),*v),pi);
                 }
                 else {
@@ -193,7 +190,6 @@ impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Displ
                                     distance: new_dist, 
                                     prev: *source,
                                     };
-                            self.path_calcs.insert( (set.clone(),*v),pi.clone());
                             self.pc.insert( (set.clone(),*v),pi);
 //                            trace!("{} - Updating {:?},{} to {}",trace_str, set,v, new_dist);
                             debug!("{:?},{} now {} (was {})",set,v,new_dist,old_min_dist);
@@ -208,8 +204,6 @@ impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Displ
             }
         }
 
-        info!("path Cacls {:?}",self.path_calcs);
-        info!("pc {:?}",self.pc);
         let mut min_distance = MinMax::NA;
         let mut final_vertex : usize = 0;
         for last_vertex in &self.vertex {
