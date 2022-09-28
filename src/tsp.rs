@@ -8,6 +8,27 @@ use crate::memtrack::MemTrack;
 use log::{  info ,/* error ,*/ debug, /* warn ,*/ trace };
 
 #[derive(Debug,Clone)]
+struct PathCalc<T> {
+    path_calcs : BTreeMap<(BTreeSet<usize>,usize),PathInfo<T>>,
+}
+
+
+impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Display+std::ops::Add<Output = T>> PathCalc<T>{
+
+    pub fn new() -> PathCalc<T> {
+            PathCalc::<T> { path_calcs : BTreeMap::<(BTreeSet::<usize>,usize),PathInfo<T>>::new() }
+    }
+
+    pub fn insert(&mut self, location: (BTreeSet::<usize>,usize), data: PathInfo<T>) {
+            self.path_calcs.insert(location,data);
+    }
+
+    pub fn get(&self, location: &(BTreeSet::<usize>,usize)) ->  Option<&PathInfo<T>> {
+        self.path_calcs.get(location)
+    }
+}
+
+#[derive(Debug,Clone)]
 pub struct PathInfo<T> {
     distance: T,
     prev: usize,
@@ -17,6 +38,7 @@ pub struct TSP<T> {
     pub vertex: BTreeSet<usize>,
     pub  vertex_sets :  Vec<BTreeSet<usize>>,
     path_calcs : BTreeMap<(BTreeSet<usize>,usize),PathInfo<T>>,
+    pc : PathCalc<T>,
     pub graph: UnidirectionalGraph<T>,
     tsp_path:  Vec<usize>,
     tsp_distance: MinMax<T>,
@@ -62,6 +84,7 @@ impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Displ
             vertex:    BTreeSet::<usize>::new(),
             vertex_sets: Vec::<BTreeSet<usize>>::new(),
             path_calcs : BTreeMap::<(BTreeSet::<usize>,usize),PathInfo<T>>::new(),
+            pc : PathCalc::<T>::new(),
             graph: UnidirectionalGraph::<T>::new(),
             tsp_path:  Vec::<usize>::new(),
             tsp_distance: MinMax::NA,
@@ -110,7 +133,7 @@ impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Displ
         path.push(cur_vertex);
         while !reduced_set.is_empty() {
             trace!("Added  {}  to path, new set now {:?}",cur_vertex,reduced_set);
-            let previous = self.path_calcs.get(&(reduced_set.clone(),cur_vertex)).unwrap().prev;
+            let previous = self.pc.get(&(reduced_set.clone(),cur_vertex)).unwrap().prev;
             reduced_set.remove(&cur_vertex);
             trace!("Added  {}  to path, new set now {:?}, previous {}",cur_vertex,reduced_set,previous);
             path.push(previous);
@@ -131,7 +154,7 @@ impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Displ
         info!("Processing {} sets",set_count);
         for set in &self.vertex_sets {
             _count += 1;
-            trace!("Starting Set {:?} ", set);
+            trace!("Starting Set {:?} size: {}", set,set.len());
             self.mc.debug_mem_change(&format!("In set #{}  {:?}",_count,set));
             let mut reduced_set = set.clone();
             if size_of_set != reduced_set.len() {
@@ -146,20 +169,19 @@ impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Displ
                     let edge = UnidirectionalGraph::<T>::edge_name(1,*v);
                     let edge_distance = self.graph.get_distance(1,*v);
                     trace!(" Edge (1,{}) i.e {:?} {}", v,edge, edge_distance);
-                    self.path_calcs.insert(
-                        (set.clone(),*v),
-                        PathInfo { 
+                    let pi = PathInfo { 
                             distance: edge_distance, 
                             prev: 1, 
-                        }
-                    );
+                        };
+                    self.path_calcs.insert((set.clone(),*v),pi.clone());
+                    self.pc.insert((set.clone(),*v),pi);
                 }
                 else {
                     let mut min_distance = MinMax::NA;
                     for source in &reduced_set {
                         let edge = UnidirectionalGraph::<T>::edge_name(*source,*v);
                         let edge_distance = self.graph.get_distance(*source,*v);
-                        let set_weight = self.path_calcs.get(&(reduced_set.clone(),*source)).unwrap().distance;
+                        let set_weight = self.pc.get(&(reduced_set.clone(),*source)).unwrap().distance;
                         let new_dist = set_weight + edge_distance;
                         let trace_str = format!("Set {:?} to {} via {} : sd {}+ ({},{}) d {} = {} cur {})",
                                     reduced_set, v, source, set_weight, source, v, edge_distance, new_dist, min_distance);
@@ -167,13 +189,12 @@ impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Displ
                         let old_min_dist = min_distance;
                         if Value(new_dist) < min_distance {
                             min_distance = Value(new_dist);
-                            self.path_calcs.insert(
-                                (set.clone(),*v),
-                                PathInfo {
+                            let pi = PathInfo {
                                     distance: new_dist, 
                                     prev: *source,
-                                    }
-                            );
+                                    };
+                            self.path_calcs.insert( (set.clone(),*v),pi.clone());
+                            self.pc.insert( (set.clone(),*v),pi);
 //                            trace!("{} - Updating {:?},{} to {}",trace_str, set,v, new_dist);
                             debug!("{:?},{} now {} (was {})",set,v,new_dist,old_min_dist);
                         }
@@ -186,10 +207,13 @@ impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Displ
                 reduced_set.insert(*v);
             }
         }
+
+        info!("path Cacls {:?}",self.path_calcs);
+        info!("pc {:?}",self.pc);
         let mut min_distance = MinMax::NA;
         let mut final_vertex : usize = 0;
         for last_vertex in &self.vertex {
-            let set_weight = self.path_calcs.get(&(self.vertex.clone(),*last_vertex)).unwrap().distance;
+            let set_weight = self.pc.get(&(self.vertex.clone(),*last_vertex)).unwrap().distance;
             let edge_distance = self.graph.get_distance(1,*last_vertex);
             let new_weight = set_weight + edge_distance;
             if Value(new_weight) < min_distance {
