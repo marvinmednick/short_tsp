@@ -32,7 +32,15 @@ impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Displ
 #[derive(Debug,Clone)]
 pub struct PathInfo<T> {
     distance: T,
-    prev: usize,
+//    prev: usize,
+}
+
+impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Display+std::ops::Add<Output = T>> PathInfo<T> {
+
+    pub fn new(distance : T, prev: usize) -> PathInfo<T> {
+        PathInfo::<T> {distance }
+
+    }
 }
 
 pub struct TSP<T> {
@@ -131,6 +139,7 @@ impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Displ
 
     pub fn find_path(&self, vertex_set: &Vec<usize>, last_vertex: usize) -> Vec<usize> {
         let mut path = Vec::<usize>::new();
+        /*
         let mut reduced_set = BitSet32::new();
         reduced_set.add_from_vec(vertex_set);
 
@@ -146,6 +155,8 @@ impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Displ
             cur_vertex = previous;
         }
         info!("TSP Path is {:?}",path);
+        */
+        info!("TSP Path not calcuated");
         path
 
     }
@@ -162,11 +173,11 @@ impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Displ
             let set = BitSet32::from_u32(*bit_set);
             _count += 1;
             trace!("Starting Set {:?} size: {}", set,set.len());
-            self.mc.debug_mem_change(&format!("In set #{}  {:?}",_count,set));
             let mut reduced_set = set.clone();
             if size_of_set != reduced_set.len() {
                 size_of_set = reduced_set.len();
                 info!("Processing sets of size {}",size_of_set);
+                self.mc.debug_mem_change(&format!("In set #{}  {:?}",_count,set));
             }
             for v in set.get_vec() {
                 reduced_set.remove(v);
@@ -176,10 +187,7 @@ impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Displ
                     let edge = UnidirectionalGraph::<T>::edge_name(1,v);
                     let edge_distance = self.graph.get_distance(1,v);
                     trace!(" Edge (1,{}) i.e {:?} {}", v,edge, edge_distance);
-                    let pi = PathInfo { 
-                            distance: edge_distance, 
-                            prev: 1, 
-                        };
+                    let pi = PathInfo::<T>::new(edge_distance, 1);
                     self.pc.insert((set.get_set_id(),v),pi);
                 }
                 else {
@@ -195,10 +203,7 @@ impl <T: std::cmp::PartialOrd+std::fmt::Debug+Copy+std::ops::Add+std::fmt::Displ
                         let old_min_dist = min_distance;
                         if Value(new_dist) < min_distance {
                             min_distance = Value(new_dist);
-                            let pi = PathInfo {
-                                    distance: new_dist, 
-                                    prev: source,
-                                    };
+                            let pi = PathInfo::<T>::new(new_dist, source);
                             self.pc.insert( (set.get_set_id(),v),pi);
 //                            trace!("{} - Updating {:?},{} to {}",trace_str, set,v, new_dist);
                             debug!("{:?},{} now {} (was {})",set,v,new_dist,old_min_dist);
